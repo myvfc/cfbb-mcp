@@ -415,6 +415,11 @@ app.all('/mcp', async (req, res) => {
           
           const data = await response.json();
           
+          // DEBUG: Log first game to see structure
+          if (data && data.length > 0) {
+            console.log(`  DEBUG - First game:`, JSON.stringify(data[0], null, 2));
+          }
+          
           if (!data || data.length === 0) {
             return res.json({
               jsonrpc: '2.0',
@@ -426,14 +431,22 @@ app.all('/mcp', async (req, res) => {
           let text = `🏀 ${team.toUpperCase()} BASKETBALL SCHEDULE - ${year}\n\n`;
           
           data.forEach((game, idx) => {
-            const isHome = game.home_team?.toLowerCase() === team;
-            const opponent = isHome ? game.away_team : game.home_team;
+            // Try different field name combinations
+            const homeTeam = game.home_team || game.homeTeam || game.home;
+            const awayTeam = game.away_team || game.awayTeam || game.away;
+            const isHome = homeTeam?.toLowerCase() === team;
+            const opponent = isHome ? awayTeam : homeTeam;
             const location = isHome ? 'vs' : '@';
             
-            text += `${idx + 1}. ${location} ${opponent}`;
-            if (game.status === 'completed') {
-              const teamScore = isHome ? game.home_score : game.away_score;
-              const oppScore = isHome ? game.away_score : game.home_score;
+            text += `${idx + 1}. ${location} ${opponent || 'TBD'}`;
+            
+            const status = game.status || game.gameStatus;
+            const homeScore = game.home_score || game.homeScore || game.home_points;
+            const awayScore = game.away_score || game.awayScore || game.away_points;
+            
+            if (status === 'completed' && homeScore != null && awayScore != null) {
+              const teamScore = isHome ? homeScore : awayScore;
+              const oppScore = isHome ? awayScore : homeScore;
               const result = teamScore > oppScore ? 'W' : 'L';
               text += ` - ${result} ${teamScore}-${oppScore}`;
             }
