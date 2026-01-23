@@ -177,7 +177,7 @@ app.all('/mcp', async (req, res) => {
       
       // TOOL 1: Get Basketball Score
       if (name === 'get_basketball_score') {
-        const url = `https://api.collegebasketballdata.com/games?team=${team}&year=${year}`;
+        const url = `https://api.collegebasketballdata.com/games?team=${team}&season=${year}`;
         console.log(`  Fetching: ${url}`);
         
         try {
@@ -239,7 +239,7 @@ app.all('/mcp', async (req, res) => {
       
       // TOOL 2: Get Basketball Player Stats
       if (name === 'get_basketball_player_stats') {
-        const url = `https://api.collegebasketballdata.com/stats/player/season?team=${team}&year=${year}`;
+        const url = `https://api.collegebasketballdata.com/stats/player/season?team=${team}&season=${year}`;
         console.log(`  Fetching: ${url}`);
         
         try {
@@ -258,15 +258,26 @@ app.all('/mcp', async (req, res) => {
           
           const data = await response.json();
           
-          console.log(`  DEBUG - Player stats data length:`, data?.length);
-          if (data && data.length > 0) {
-            console.log(`  DEBUG - First player:`, JSON.stringify(data[0], null, 2).substring(0, 800));
-          }
-          
           if (!data || data.length === 0) {
             return res.json({
               jsonrpc: '2.0',
-              result: { content: [{ type: 'text', text: `No player stats found for ${team.toUpperCase()} basketball in ${year}` }] },
+              result: { content: [{ type: 'text', text: `No player stats found for ${team.toUpperCase()} basketball in the ${year-1}-${year} season` }] },
+              id
+            });
+          }
+          
+          // Filter to requested season
+          const seasonData = data.filter(p => p.season === year);
+          
+          if (seasonData.length === 0) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { 
+                content: [{ 
+                  type: 'text', 
+                  text: `No player stats found for ${team.toUpperCase()} basketball in the ${year-1}-${year} season.\n\nThe current season is 2025-2026 (year=${new Date().getFullYear()}). Try asking for that year!` 
+                }] 
+              },
               id
             });
           }
@@ -282,11 +293,11 @@ app.all('/mcp', async (req, res) => {
           }
           
           // Filter by player if specified
-          let filteredData = data;
+          let filteredData = seasonData;
           if (playerName) {
-            filteredData = data.filter(p => 
-              p.player?.toLowerCase().includes(playerName.toLowerCase()) ||
-              playerName.toLowerCase().includes(p.player?.toLowerCase())
+            filteredData = seasonData.filter(p => 
+              p.name?.toLowerCase().includes(playerName.toLowerCase()) ||
+              playerName.toLowerCase().includes(p.name?.toLowerCase())
             );
             
             if (filteredData.length === 0) {
@@ -295,7 +306,7 @@ app.all('/mcp', async (req, res) => {
                 result: { 
                   content: [{ 
                     type: 'text', 
-                    text: `${playerName} is not listed in ${team.toUpperCase()}'s ${year} basketball roster.\n\nThis player may:\n• Play for a different team\n• Not have recorded stats this season\n• Have a different spelling of their name` 
+                    text: `${playerName} is not listed in ${team.toUpperCase()}'s ${year-1}-${year} basketball roster.\n\nThis player may:\n• Play for a different team\n• Not have recorded stats this season\n• Have a different spelling of their name` 
                   }] 
                 },
                 id
@@ -306,25 +317,31 @@ app.all('/mcp', async (req, res) => {
           let text = '';
           
           // If specific player, show detailed stats
-          if (playerName && filteredData.length === 1) {
+          if (playerName && filteredData.length >= 1) {
             const player = filteredData[0];
-            text = `🏀 ${player.player?.toUpperCase() || 'PLAYER'} - ${year}\n\n`;
+            const games = player.games || 1;
             
-            if (player.ppg !== undefined) text += `Points Per Game: ${player.ppg}\n`;
-            if (player.rpg !== undefined) text += `Rebounds Per Game: ${player.rpg}\n`;
-            if (player.apg !== undefined) text += `Assists Per Game: ${player.apg}\n`;
-            if (player.fg_pct !== undefined) text += `FG%: ${(player.fg_pct * 100).toFixed(1)}%\n`;
-            if (player.three_pt_pct !== undefined) text += `3PT%: ${(player.three_pt_pct * 100).toFixed(1)}%\n`;
-            if (player.ft_pct !== undefined) text += `FT%: ${(player.ft_pct * 100).toFixed(1)}%\n`;
+            text = `🏀 ${player.name?.toUpperCase() || 'PLAYER'} - ${year-1}-${year}\n\n`;
+            
+            text += `Games: ${player.games}\n`;
+            if (player.points) text += `Points Per Game: ${(player.points / games).toFixed(1)}\n`;
+            if (player.rebounds) text += `Rebounds Per Game: ${(player.rebounds.total / games).toFixed(1)}\n`;
+            if (player.assists) text += `Assists Per Game: ${(player.assists / games).toFixed(1)}\n`;
+            if (player.fieldGoals?.pct) text += `FG%: ${player.fieldGoals.pct.toFixed(1)}%\n`;
+            if (player.threePointFieldGoals?.pct) text += `3PT%: ${player.threePointFieldGoals.pct.toFixed(1)}%\n`;
+            if (player.freeThrows?.pct) text += `FT%: ${player.freeThrows.pct.toFixed(1)}%\n`;
           } else {
             // Show top scorers
-            text = `🏀 ${team.toUpperCase()} BASKETBALL LEADERS - ${year}\n\n`;
+            text = `🏀 ${team.toUpperCase()} BASKETBALL LEADERS - ${year-1}-${year}\n\n`;
             
-            const topScorers = filteredData.sort((a, b) => (b.ppg || 0) - (a.ppg || 0)).slice(0, 5);
+            const topScorers = filteredData
+              .filter(p => p.games > 0)
+              .sort((a, b) => (b.points / b.games) - (a.points / a.games))
+              .slice(0, 5);
             
             text += `TOP SCORERS:\n`;
             topScorers.forEach((p, i) => {
-              text += `${i + 1}. ${p.player}: ${p.ppg} PPG\n`;
+              text += `${i + 1}. ${p.name}: ${(p.points / p.games).toFixed(1)} PPG\n`;
             });
           }
           
@@ -346,7 +363,7 @@ app.all('/mcp', async (req, res) => {
       
       // TOOL 3: Get Basketball Team Stats
       if (name === 'get_basketball_team_stats') {
-        const url = `https://api.collegebasketballdata.com/stats/team/season?team=${team}&year=${year}`;
+        const url = `https://api.collegebasketballdata.com/stats/team/season?team=${team}&season=${year}`;
         console.log(`  Fetching: ${url}`);
         
         try {
@@ -447,7 +464,7 @@ app.all('/mcp', async (req, res) => {
       
       // TOOL 4: Get Basketball Schedule
       if (name === 'get_basketball_schedule') {
-        const url = `https://api.collegebasketballdata.com/games?team=${team}&year=${year}`;
+        const url = `https://api.collegebasketballdata.com/games?team=${team}&season=${year}`;
         console.log(`  Fetching: ${url}`);
         
         try {
@@ -530,7 +547,7 @@ app.all('/mcp', async (req, res) => {
       
       // TOOL 5: Get Basketball Rankings
       if (name === 'get_basketball_rankings') {
-        const url = `https://api.collegebasketballdata.com/rankings?team=${team}&year=${year}`;
+        const url = `https://api.collegebasketballdata.com/rankings?team=${team}&season=${year}`;
         console.log(`  Fetching: ${url}`);
         
         try {
@@ -602,7 +619,7 @@ app.all('/mcp', async (req, res) => {
       
       // TOOL 6: Get Basketball Shooting Stats
       if (name === 'get_basketball_shooting_stats') {
-        const url = `https://api.collegebasketballdata.com/stats/player/shooting/season?team=${team}&year=${year}`;
+        const url = `https://api.collegebasketballdata.com/stats/player/shooting/season?team=${team}&season=${year}`;
         console.log(`  Fetching: ${url}`);
         
         try {
@@ -691,7 +708,7 @@ app.all('/mcp', async (req, res) => {
       
       // TOOL 7: Get Basketball Roster
       if (name === 'get_basketball_roster') {
-        const url = `https://api.collegebasketballdata.com/teams/roster?team=${team}&year=${year}`;
+        const url = `https://api.collegebasketballdata.com/teams/roster?team=${team}&season=${year}`;
         console.log(`  Fetching: ${url}`);
         
         try {
