@@ -258,6 +258,11 @@ app.all('/mcp', async (req, res) => {
           
           const data = await response.json();
           
+          console.log(`  DEBUG - Player stats data length:`, data?.length);
+          if (data && data.length > 0) {
+            console.log(`  DEBUG - First player:`, JSON.stringify(data[0], null, 2).substring(0, 800));
+          }
+          
           if (!data || data.length === 0) {
             return res.json({
               jsonrpc: '2.0',
