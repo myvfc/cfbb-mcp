@@ -360,9 +360,6 @@ app.all('/mcp', async (req, res) => {
           
           const data = await response.json();
           
-          console.log(`  DEBUG - Team stats data length:`, data?.length);
-          console.log(`  DEBUG - First 500 chars:`, JSON.stringify(data, null, 2).substring(0, 500));
-          
           if (!data || data.length === 0) {
             return res.json({
               jsonrpc: '2.0',
@@ -371,15 +368,61 @@ app.all('/mcp', async (req, res) => {
             });
           }
           
-          const stats = data[0];
-          let text = `🏀 ${team.toUpperCase()} BASKETBALL TEAM STATS - ${year}\n\n`;
+          // Filter to only the requested year
+          const filteredData = data.filter(d => d.season === year);
           
-          if (stats.ppg !== undefined) text += `Points Per Game: ${stats.ppg}\n`;
-          if (stats.rpg !== undefined) text += `Rebounds Per Game: ${stats.rpg}\n`;
-          if (stats.apg !== undefined) text += `Assists Per Game: ${stats.apg}\n`;
-          if (stats.fg_pct !== undefined) text += `FG%: ${(stats.fg_pct * 100).toFixed(1)}%\n`;
-          if (stats.three_pt_pct !== undefined) text += `3PT%: ${(stats.three_pt_pct * 100).toFixed(1)}%\n`;
-          if (stats.ft_pct !== undefined) text += `FT%: ${(stats.ft_pct * 100).toFixed(1)}%\n`;
+          if (filteredData.length === 0) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { 
+                content: [{ 
+                  type: 'text', 
+                  text: `No team stats found for ${team.toUpperCase()} basketball in the ${year-1}-${year} season.\n\nThe current season is 2025-2026 (year=${new Date().getFullYear()}). Try that year!` 
+                }] 
+              },
+              id
+            });
+          }
+          
+          const teamData = filteredData[0];
+          const stats = teamData.teamStats;
+          
+          let text = `🏀 ${team.toUpperCase()} BASKETBALL TEAM STATS - ${year-1}-${year} Season\n\n`;
+          
+          if (teamData.games) text += `Games Played: ${teamData.games}\n`;
+          if (teamData.wins !== undefined && teamData.losses !== undefined) {
+            text += `Record: ${teamData.wins}-${teamData.losses}\n\n`;
+          }
+          
+          // Field goals
+          if (stats.fieldGoals) {
+            if (stats.fieldGoals.pct !== null) {
+              text += `Field Goal %: ${(stats.fieldGoals.pct * 100).toFixed(1)}%\n`;
+            }
+          }
+          
+          // Three pointers
+          if (stats.threePointFieldGoals) {
+            if (stats.threePointFieldGoals.pct !== null) {
+              text += `Three Point %: ${(stats.threePointFieldGoals.pct * 100).toFixed(1)}%\n`;
+            }
+          }
+          
+          // Free throws
+          if (stats.freeThrows) {
+            if (stats.freeThrows.pct !== null) {
+              text += `Free Throw %: ${(stats.freeThrows.pct * 100).toFixed(1)}%\n`;
+            }
+          }
+          
+          // Other stats - calculate per-game averages
+          const games = teamData.games || 1; // Prevent division by zero
+          
+          if (stats.assists) text += `Assists Per Game: ${(stats.assists / games).toFixed(1)}\n`;
+          if (stats.rebounds) text += `Rebounds Per Game: ${(stats.rebounds / games).toFixed(1)}\n`;
+          if (stats.steals) text += `Steals Per Game: ${(stats.steals / games).toFixed(1)}\n`;
+          if (stats.blocks) text += `Blocks Per Game: ${(stats.blocks / games).toFixed(1)}\n`;
+          if (stats.turnovers) text += `Turnovers Per Game: ${(stats.turnovers / games).toFixed(1)}\n`;
           
           return res.json({
             jsonrpc: '2.0',
