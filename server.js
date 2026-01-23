@@ -759,11 +759,8 @@ app.all('/mcp', async (req, res) => {
           
           const data = await response.json();
           
-          console.log(`  DEBUG - Roster response type:`, typeof data, Array.isArray(data));
-          console.log(`  DEBUG - Players array length:`, data?.players?.length);
-          
-          // Roster returns a single object with players array
-          if (!data || !data.players || data.players.length === 0) {
+          // Roster returns array with one object containing players array
+          if (!data || data.length === 0 || !data[0] || !data[0].players || data[0].players.length === 0) {
             return res.json({
               jsonrpc: '2.0',
               result: { content: [{ type: 'text', text: `No roster found for ${team.toUpperCase()} basketball in the ${year-1}-${year} season` }] },
@@ -771,8 +768,10 @@ app.all('/mcp', async (req, res) => {
             });
           }
           
+          const rosterData = data[0];
+          
           // Filter to requested season
-          if (data.season !== year) {
+          if (rosterData.season !== year) {
             return res.json({
               jsonrpc: '2.0',
               result: { 
@@ -787,7 +786,7 @@ app.all('/mcp', async (req, res) => {
           
           let text = `🏀 ${team.toUpperCase()} BASKETBALL ROSTER - ${year-1}-${year}\n\n`;
           
-          data.players.forEach((player, idx) => {
+          rosterData.players.forEach((player, idx) => {
             text += `${idx + 1}. ${player.name}`;
             if (player.position) text += ` - ${player.position}`;
             if (player.jersey) text += ` (#${player.jersey})`;
@@ -849,6 +848,7 @@ setInterval(() => {
   fetch(`http://localhost:${PORT}/health`).catch(() => {});
   console.log(`💓 Alive: ${Math.floor(process.uptime())}s`);
 }, 30000);
+
 
 
 
