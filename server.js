@@ -196,6 +196,11 @@ app.all('/mcp', async (req, res) => {
           
           const data = await response.json();
           
+          console.log(`  DEBUG - Games data length:`, data?.length);
+          if (data && data.length > 0) {
+            console.log(`  DEBUG - Last game in array:`, JSON.stringify(data[data.length - 1], null, 2).substring(0, 400));
+          }
+          
           if (!data || data.length === 0) {
             return res.json({
               jsonrpc: '2.0',
@@ -204,8 +209,30 @@ app.all('/mcp', async (req, res) => {
             });
           }
           
-          // Get most recent game
-          const recentGame = data[data.length - 1];
+          // Filter to requested season first
+          const seasonGames = data.filter(g => g.season === year);
+          
+          if (seasonGames.length === 0) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `No basketball games found for ${team.toUpperCase()} in the ${year-1}-${year} season` }] },
+              id
+            });
+          }
+          
+          // Get most recent COMPLETED game
+          const completedGames = seasonGames.filter(g => g.status === 'final' && g.homePoints != null && g.awayPoints != null);
+          
+          if (completedGames.length === 0) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `No completed games found for ${team.toUpperCase()} in the ${year-1}-${year} season yet.` }] },
+              id
+            });
+          }
+          
+          // Sort by date and get most recent
+          const recentGame = completedGames.sort((a, b) => new Date(b.startDate) - new Date(a.startDate))[0];
           
           let text = `🏀 ${team.toUpperCase()} BASKETBALL - Most Recent Game\n\n`;
           
@@ -638,6 +665,11 @@ app.all('/mcp', async (req, res) => {
           
           const data = await response.json();
           
+          console.log(`  DEBUG - Shooting stats data length:`, data?.length);
+          if (data && data.length > 0) {
+            console.log(`  DEBUG - First shooting entry:`, JSON.stringify(data[0], null, 2).substring(0, 500));
+          }
+          
           if (!data || data.length === 0) {
             return res.json({
               jsonrpc: '2.0',
@@ -726,6 +758,11 @@ app.all('/mcp', async (req, res) => {
           }
           
           const data = await response.json();
+          
+          console.log(`  DEBUG - Roster data length:`, data?.length);
+          if (data && data.length > 0) {
+            console.log(`  DEBUG - First roster entry:`, JSON.stringify(data[0], null, 2).substring(0, 300));
+          }
           
           if (!data || data.length === 0) {
             return res.json({
