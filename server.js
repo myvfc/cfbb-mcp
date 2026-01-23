@@ -177,7 +177,7 @@ app.all('/mcp', async (req, res) => {
       
       // TOOL 1: Get Basketball Score
       if (name === 'get_basketball_score') {
-        const url = `https://api.collegebasketballdata.com/cbb/games?team=${team}&year=${year}`;
+        const url = `https://api.collegebasketballdata.com/games?team=${team}&year=${year}`;
         console.log(`  Fetching: ${url}`);
         
         try {
@@ -239,7 +239,7 @@ app.all('/mcp', async (req, res) => {
       
       // TOOL 2: Get Basketball Player Stats
       if (name === 'get_basketball_player_stats') {
-        const url = `https://api.collegebasketballdata.com/cbb/stats/player/season?team=${team}&year=${year}`;
+        const url = `https://api.collegebasketballdata.com/stats/player/season?team=${team}&year=${year}`;
         console.log(`  Fetching: ${url}`);
         
         try {
@@ -341,7 +341,7 @@ app.all('/mcp', async (req, res) => {
       
       // TOOL 3: Get Basketball Team Stats
       if (name === 'get_basketball_team_stats') {
-        const url = `https://api.collegebasketballdata.com/cbb/stats/team/season?team=${team}&year=${year}`;
+        const url = `https://api.collegebasketballdata.com/stats/team/season?team=${team}&year=${year}`;
         console.log(`  Fetching: ${url}`);
         
         try {
@@ -396,7 +396,7 @@ app.all('/mcp', async (req, res) => {
       
       // TOOL 4: Get Basketball Schedule
       if (name === 'get_basketball_schedule') {
-        const url = `https://api.collegebasketballdata.com/cbb/games?team=${team}&year=${year}`;
+        const url = `https://api.collegebasketballdata.com/games?team=${team}&year=${year}`;
         console.log(`  Fetching: ${url}`);
         
         try {
@@ -458,7 +458,7 @@ app.all('/mcp', async (req, res) => {
       
       // TOOL 5: Get Basketball Rankings
       if (name === 'get_basketball_rankings') {
-        const url = `https://api.collegebasketballdata.com/cbb/rankings?team=${team}&year=${year}`;
+        const url = `https://api.collegebasketballdata.com/rankings?team=${team}&year=${year}`;
         console.log(`  Fetching: ${url}`);
         
         try {
@@ -530,7 +530,7 @@ app.all('/mcp', async (req, res) => {
       
       // TOOL 6: Get Basketball Shooting Stats
       if (name === 'get_basketball_shooting_stats') {
-        const url = `https://api.collegebasketballdata.com/cbb/stats/player/shooting/season?team=${team}&year=${year}`;
+        const url = `https://api.collegebasketballdata.com/stats/player/shooting/season?team=${team}&year=${year}`;
         console.log(`  Fetching: ${url}`);
         
         try {
@@ -619,7 +619,7 @@ app.all('/mcp', async (req, res) => {
       
       // TOOL 7: Get Basketball Roster
       if (name === 'get_basketball_roster') {
-        const url = `https://api.collegebasketballdata.com/cbb/teams/roster?team=${team}&year=${year}`;
+        const url = `https://api.collegebasketballdata.com/teams/roster?team=${team}&year=${year}`;
         console.log(`  Fetching: ${url}`);
         
         try {
@@ -709,4 +709,5 @@ setInterval(() => {
   fetch(`http://localhost:${PORT}/health`).catch(() => {});
   console.log(`💓 Alive: ${Math.floor(process.uptime())}s`);
 }, 30000);
+
 
