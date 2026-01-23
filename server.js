@@ -209,15 +209,15 @@ app.all('/mcp', async (req, res) => {
           
           let text = `🏀 ${team.toUpperCase()} BASKETBALL - Most Recent Game\n\n`;
           
-          const isHome = recentGame.home_team?.toLowerCase() === team;
-          const opponent = isHome ? recentGame.away_team : recentGame.home_team;
-          const teamScore = isHome ? recentGame.home_score : recentGame.away_score;
-          const oppScore = isHome ? recentGame.away_score : recentGame.home_score;
+          const isHome = recentGame.homeTeam?.toLowerCase() === team;
+          const opponent = isHome ? recentGame.awayTeam : recentGame.homeTeam;
+          const teamScore = isHome ? recentGame.homePoints : recentGame.awayPoints;
+          const oppScore = isHome ? recentGame.awayPoints : recentGame.homePoints;
           const result = teamScore > oppScore ? 'W' : 'L';
           
           text += `${result} vs ${opponent}\n`;
           text += `Final: ${teamScore}-${oppScore}\n`;
-          if (recentGame.status === 'completed') {
+          if (recentGame.status === 'final') {
             text += `Status: Final\n`;
           }
           
@@ -415,11 +415,6 @@ app.all('/mcp', async (req, res) => {
           
           const data = await response.json();
           
-          // DEBUG: Log first game to see structure
-          if (data && data.length > 0) {
-            console.log(`  DEBUG - First game:`, JSON.stringify(data[0], null, 2));
-          }
-          
           if (!data || data.length === 0) {
             return res.json({
               jsonrpc: '2.0',
@@ -428,25 +423,38 @@ app.all('/mcp', async (req, res) => {
             });
           }
           
-          let text = `🏀 ${team.toUpperCase()} BASKETBALL SCHEDULE - ${year}\n\n`;
+          // Filter to only games from requested year
+          const filteredGames = data.filter(game => game.season === year);
           
-          data.forEach((game, idx) => {
-            // Try different field name combinations
-            const homeTeam = game.home_team || game.homeTeam || game.home;
-            const awayTeam = game.away_team || game.awayTeam || game.away;
+          if (filteredGames.length === 0) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { 
+                content: [{ 
+                  type: 'text', 
+                  text: `No basketball games found for ${team.toUpperCase()} in the ${year-1}-${year} season.\n\nThe current season is 2025-2026 (year=${new Date().getFullYear()}). Try asking for that year!` 
+                }] 
+              },
+              id
+            });
+          }
+          
+          let text = `🏀 ${team.toUpperCase()} BASKETBALL SCHEDULE - ${year-1}-${year} Season\n\n`;
+          
+          filteredGames.forEach((game, idx) => {
+            const homeTeam = game.homeTeam;
+            const awayTeam = game.awayTeam;
             const isHome = homeTeam?.toLowerCase() === team;
             const opponent = isHome ? awayTeam : homeTeam;
             const location = isHome ? 'vs' : '@';
             
-            text += `${idx + 1}. ${location} ${opponent || 'TBD'}`;
+            text += `${idx + 1}. ${location} ${opponent}`;
             
-            const status = game.status || game.gameStatus;
-            const homeScore = game.home_score || game.homeScore || game.home_points;
-            const awayScore = game.away_score || game.awayScore || game.away_points;
-            
-            if (status === 'completed' && homeScore != null && awayScore != null) {
-              const teamScore = isHome ? homeScore : awayScore;
-              const oppScore = isHome ? awayScore : homeScore;
+            if (game.status === 'final') {
+              const homePoints = game.homePoints;
+              const awayPoints = game.awayPoints;
+              const teamScore = isHome ? homePoints : awayPoints;
+              const oppScore = isHome ? awayPoints : homePoints;
               const result = teamScore > oppScore ? 'W' : 'L';
               text += ` - ${result} ${teamScore}-${oppScore}`;
             }
