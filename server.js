@@ -790,7 +790,12 @@ app.all('/mcp', async (req, res) => {
             text += `${idx + 1}. ${player.name}`;
             if (player.position) text += ` - ${player.position}`;
             if (player.jersey) text += ` (#${player.jersey})`;
-            if (player.height) text += ` - ${player.height}`;
+            if (player.height) {
+              // Convert inches to feet-inches (e.g., 82 → 6'10")
+              const feet = Math.floor(player.height / 12);
+              const inches = player.height % 12;
+              text += ` - ${feet}'${inches}"`;
+            }
             text += `\n`;
           });
           
