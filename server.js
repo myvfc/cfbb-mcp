@@ -360,6 +360,9 @@ app.all('/mcp', async (req, res) => {
           
           const data = await response.json();
           
+          console.log(`  DEBUG - Team stats data length:`, data?.length);
+          console.log(`  DEBUG - First 500 chars:`, JSON.stringify(data, null, 2).substring(0, 500));
+          
           if (!data || data.length === 0) {
             return res.json({
               jsonrpc: '2.0',
@@ -730,5 +733,6 @@ setInterval(() => {
   fetch(`http://localhost:${PORT}/health`).catch(() => {});
   console.log(`💓 Alive: ${Math.floor(process.uptime())}s`);
 }, 30000);
+
 
 
