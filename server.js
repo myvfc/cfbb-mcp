@@ -759,25 +759,39 @@ app.all('/mcp', async (req, res) => {
           
           const data = await response.json();
           
-          console.log(`  DEBUG - Roster data length:`, data?.length);
-          if (data && data.length > 0) {
-            console.log(`  DEBUG - First roster entry:`, JSON.stringify(data[0], null, 2).substring(0, 300));
-          }
+          console.log(`  DEBUG - Roster response type:`, typeof data, Array.isArray(data));
+          console.log(`  DEBUG - Players array length:`, data?.players?.length);
           
-          if (!data || data.length === 0) {
+          // Roster returns a single object with players array
+          if (!data || !data.players || data.players.length === 0) {
             return res.json({
               jsonrpc: '2.0',
-              result: { content: [{ type: 'text', text: `No roster found for ${team.toUpperCase()} basketball in ${year}` }] },
+              result: { content: [{ type: 'text', text: `No roster found for ${team.toUpperCase()} basketball in the ${year-1}-${year} season` }] },
               id
             });
           }
           
-          let text = `🏀 ${team.toUpperCase()} BASKETBALL ROSTER - ${year}\n\n`;
+          // Filter to requested season
+          if (data.season !== year) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { 
+                content: [{ 
+                  type: 'text', 
+                  text: `No roster found for ${team.toUpperCase()} basketball in the ${year-1}-${year} season.\n\nThe current season is 2025-2026 (year=${new Date().getFullYear()}). Try that year!` 
+                }] 
+              },
+              id
+            });
+          }
           
-          data.forEach((player, idx) => {
-            text += `${idx + 1}. ${player.player}`;
+          let text = `🏀 ${team.toUpperCase()} BASKETBALL ROSTER - ${year-1}-${year}\n\n`;
+          
+          data.players.forEach((player, idx) => {
+            text += `${idx + 1}. ${player.name}`;
             if (player.position) text += ` - ${player.position}`;
-            if (player.height) text += ` (${player.height})`;
+            if (player.jersey) text += ` (#${player.jersey})`;
+            if (player.height) text += ` - ${player.height}`;
             text += `\n`;
           });
           
@@ -835,6 +849,7 @@ setInterval(() => {
   fetch(`http://localhost:${PORT}/health`).catch(() => {});
   console.log(`💓 Alive: ${Math.floor(process.uptime())}s`);
 }, 30000);
+
 
 
 
