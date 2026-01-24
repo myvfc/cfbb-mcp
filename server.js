@@ -646,7 +646,7 @@ app.all('/mcp', async (req, res) => {
       
       // TOOL 6: Get Basketball Shooting Stats
       if (name === 'get_basketball_shooting_stats') {
-        const url = `https://api.collegebasketballdata.com/stats/player/shooting/season?team=${team}&season=${year}`;
+        const url = `https://api.collegebasketballdata.com/stats/player/season?team=${team}&season=${year}`;
         console.log(`  Fetching: ${url}`);
         
         try {
@@ -875,6 +875,7 @@ setInterval(() => {
   fetch(`http://localhost:${PORT}/health`).catch(() => {});
   console.log(`💓 Alive: ${Math.floor(process.uptime())}s`);
 }, 30000);
+
 
 
 
