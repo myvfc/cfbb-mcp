@@ -665,15 +665,26 @@ app.all('/mcp', async (req, res) => {
           
           const data = await response.json();
           
-          console.log(`  DEBUG - Shooting stats data length:`, data?.length);
-          if (data && data.length > 0) {
-            console.log(`  DEBUG - First shooting entry:`, JSON.stringify(data[0], null, 2).substring(0, 500));
-          }
-          
           if (!data || data.length === 0) {
             return res.json({
               jsonrpc: '2.0',
-              result: { content: [{ type: 'text', text: `No shooting stats found for ${team.toUpperCase()} basketball in ${year}` }] },
+              result: { content: [{ type: 'text', text: `No shooting stats found for ${team.toUpperCase()} basketball in the ${year-1}-${year} season` }] },
+              id
+            });
+          }
+          
+          // Filter to requested season
+          const seasonData = data.filter(p => p.season === year);
+          
+          if (seasonData.length === 0) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { 
+                content: [{ 
+                  type: 'text', 
+                  text: `No shooting stats found for ${team.toUpperCase()} basketball in the ${year-1}-${year} season.\n\nThe current season is 2025-2026 (year=${new Date().getFullYear()}). Try asking for that year!` 
+                }] 
+              },
               id
             });
           }
@@ -687,11 +698,11 @@ app.all('/mcp', async (req, res) => {
             }
           }
           
-          let text = `🏀 ${team.toUpperCase()} SHOOTING STATS - ${year}\n\n`;
+          let text = `🏀 ${team.toUpperCase()} SHOOTING STATS - ${year-1}-${year}\n\n`;
           
           if (playerName) {
-            const player = data.find(p => 
-              p.player?.toLowerCase().includes(playerName.toLowerCase())
+            const player = seasonData.find(p => 
+              p.name?.toLowerCase().includes(playerName.toLowerCase())
             );
             
             if (!player) {
@@ -700,25 +711,36 @@ app.all('/mcp', async (req, res) => {
                 result: { 
                   content: [{ 
                     type: 'text', 
-                    text: `No shooting stats found for ${playerName} on ${team.toUpperCase()} in ${year}` 
+                    text: `No shooting stats found for ${playerName} on ${team.toUpperCase()} in the ${year-1}-${year} season` 
                   }] 
                 },
                 id
               });
             }
             
-            text = `🏀 ${player.player?.toUpperCase()} SHOOTING - ${year}\n\n`;
-            if (player.fg_pct !== undefined) text += `FG%: ${(player.fg_pct * 100).toFixed(1)}%\n`;
-            if (player.two_pt_pct !== undefined) text += `2PT%: ${(player.two_pt_pct * 100).toFixed(1)}%\n`;
-            if (player.three_pt_pct !== undefined) text += `3PT%: ${(player.three_pt_pct * 100).toFixed(1)}%\n`;
-            if (player.ft_pct !== undefined) text += `FT%: ${(player.ft_pct * 100).toFixed(1)}%\n`;
+            const games = player.games || 1;
+            text = `🏀 ${player.name?.toUpperCase()} SHOOTING - ${year-1}-${year}\n\n`;
+            
+            if (player.fieldGoals?.pct) text += `FG%: ${player.fieldGoals.pct.toFixed(1)}%\n`;
+            if (player.twoPointFieldGoals?.pct) text += `2PT%: ${player.twoPointFieldGoals.pct.toFixed(1)}%\n`;
+            if (player.threePointFieldGoals?.pct) text += `3PT%: ${player.threePointFieldGoals.pct.toFixed(1)}%\n`;
+            if (player.freeThrows?.pct) text += `FT%: ${player.freeThrows.pct.toFixed(1)}%\n`;
+            if (player.points) text += `PPG: ${(player.points / games).toFixed(1)}\n`;
           } else {
-            // Top 3PT shooters
-            const top3PT = data.filter(p => p.three_pt_pct).sort((a, b) => b.three_pt_pct - a.three_pt_pct).slice(0, 5);
+            // Top 3PT shooters with minimum attempts
+            const qualifiedShooters = seasonData.filter(p => 
+              p.threePointFieldGoals?.attempted >= 20 && 
+              p.threePointFieldGoals?.pct > 0
+            );
+            
+            const top3PT = qualifiedShooters
+              .sort((a, b) => b.threePointFieldGoals.pct - a.threePointFieldGoals.pct)
+              .slice(0, 5);
             
             text += `TOP 3-POINT SHOOTERS:\n`;
             top3PT.forEach((p, i) => {
-              text += `${i + 1}. ${p.player}: ${(p.three_pt_pct * 100).toFixed(1)}%\n`;
+              text += `${i + 1}. ${p.name}: ${p.threePointFieldGoals.pct.toFixed(1)}%`;
+              text += ` (${p.threePointFieldGoals.made}/${p.threePointFieldGoals.attempted})\n`;
             });
           }
           
@@ -853,7 +875,6 @@ setInterval(() => {
   fetch(`http://localhost:${PORT}/health`).catch(() => {});
   console.log(`💓 Alive: ${Math.floor(process.uptime())}s`);
 }, 30000);
-
 
 
 
